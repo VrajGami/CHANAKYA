@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sovereign Alpha | Neural Trainer</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="./style.css">
+    <style>
+      :root { --font-mono: 'JetBrains Mono', monospace; }
+      body { padding: 1rem; }
+      #app { max-width: 1600px; gap: 1rem; }
+      
+      .info-trigger {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        background: #38bdf8;
+        color: #000;
+        border-radius: 50%;
+        font-size: 10px;
+        text-align: center;
+        line-height: 14px;
+        cursor: help;
+        margin-left: 5px;
+        font-weight: bold;
+      }
+
+      .control-bar {
+        display: flex;
+        gap: 10px;
+        background: rgba(0,0,0,0.3);
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+      .btn {
+        background: var(--panel-bg);
+        border: 1px solid var(--glass-border);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+      }
+      .btn:hover { background: var(--accent-blue); color: black; }
+      .btn.active { border-color: var(--accent-green); color: var(--accent-green); }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .feature-card {
+        background: rgba(255,255,255,0.03);
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.05);
+      }
+      .feature-card label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; display: block; }
+      .feature-card span { font-family: var(--font-mono); font-size: 1.1rem; font-weight: bold; }
+
+      /* Custom tooltips */
+      .tooltip-box {
+        display: none;
+        position: absolute;
+        background: #1e293b;
+        border: 1px solid #38bdf8;
+        padding: 15px;
+        border-radius: 8px;
+        width: 300px;
+        z-index: 1000;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        font-size: 0.85rem;
+        color: #e2e8f0;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Warp Drive Controls -->
+      <div class="control-bar glass-panel">
+         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing:1px;">WARP DRIVE CONTROLS</span>
+         <button class="btn" id="ctrl-pause">PAUSE</button>
+         <button class="btn active" id="ctrl-play">PLAY</button>
+         <button class="btn" id="ctrl-step">STEP</button>
+         <div style="flex:1"></div>
+         <span style="font-size:0.7rem; color:var(--text-muted);">SPEED:</span>
+         <button class="btn" id="spd-1x">1X</button>
+         <button class="btn active" id="spd-10x">10X</button>
+         <button class="btn" id="spd-warp">WARP</button>
+      </div>
+
+      <header class="glass-panel">
+        <div class="logo">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <h1>Sovereign <span>Alpha</span></h1>
+            <span id="regime-status" class="regime-badge regime-sideways">Market Regime: Analyzing...</span>
+          </div>
+          <p id="system-clock" style="color:#10b981; font-weight:600; margin-top:8px; font-family:var(--font-mono);">⏱ MISSION DATE: 2020-01-01</p>
+          
+          <div class="learning-tracker" style="margin-top: 1.5rem;">
+            <div class="tracker-header">
+              <span>Cognitive XP (RAG Memory) <i class="info-trigger" data-info="The AI's 'Long-Term Memory'. Every trade is stored as a vector for the AI to retrieve and learn from past mistakes.">i</i></span>
+              <span id="xp-counter">0 / 1000 XP</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="xp-progress"></div></div>
+          </div>
+        </div>
+        
+        <div class="portfolio-summary">
+          <div class="metric highlight-metric">
+            <span>CAGR <i class="info-trigger" data-info="Compound Annual Growth Rate. Measures the smooth annual return of your capital, assuming profits are reinvested.">i</i></span>
+            <h2 id="metric-cagr">0.0%</h2>
+          </div>
+          <div class="metric">
+            <span>SHARPE <i class="info-trigger" data-info="The efficiency of returns. A Sharpe > 1.0 means you are getting good profit for the risk you take.">i</i></span>
+            <h2 id="metric-sharpe">0.00</h2>
+          </div>
+          <div class="metric">
+            <span>WIN RATE <i class="info-trigger" data-info="Percentage of days where the portfolio value ended higher than it started.">i</i></span>
+            <h2 id="metric-winrate">0.0%</h2>
+          </div>
+          <div class="metric">
+            <span>DRAWDOWN <i class="info-trigger" data-info="The 'Pain Metric'. Measures the maximum peak-to-trough decline. A drawdown > 10% indicates high risk.">i</i></span>
+            <h2 id="metric-drawdown">0.0%</h2>
+          </div>
+        </div>
+      </header>
+
+      <main style="display: grid; grid-template-columns: 1fr 400px; gap: 1rem;">
+        <div class="left-col" style="display:flex; flex-direction:column; gap:1rem;">
+          <!-- Chart Station -->
+          <div class="chart-container glass-panel">
+            <h3><span class="icon">📈</span> Equity Trajectory & Allocation</h3>
+            <div style="height: 250px;"><canvas id="portfolioChart"></canvas></div>
+            <div class="allocation-bar" id="allocation-bar"></div>
+            <div id="allocation-labels" style="display:flex; gap:12px; margin-top:8px; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);"></div>
+          </div>
+
+          <!-- Technical Diagnostic Panel -->
+          <div class="glass-panel">
+            <h3><span class="icon">🔬</span> Neural Feature Diagnostics</h3>
+            <div class="feature-grid">
+               <div class="feature-card">
+                 <label>Z-Score <i class="info-trigger" data-info="Statistical deviation from the mean. Z > 2.0 means overbought; Z < -2.0 means oversold.">i</i></label>
+                 <span id="diag-zscore">--</span>
+               </div>
+               <div class="feature-card">
+                 <label>RSI <i class="info-trigger" data-info="Relative Strength Index. Measures momentum speed. > 70 is Bearish (top); < 30 is Bullish (bottom).">i</i></label>
+                 <span id="diag-rsi">--</span>
+               </div>
+               <div class="feature-card">
+                 <label>Sentiment <i class="info-trigger" data-info="AI's reading of news and macro data. +1.0 is Euphoric; -1.0 is Panic.">i</i></label>
+                 <span id="diag-sentiment">--</span>
+               </div>
+               <div class="feature-card">
+                 <label>Volatility <i class="info-trigger" data-info="Market instability. Higher volatility increases the 'Risk Premium' required for a trade.">i</i></label>
+                 <span id="diag-vol">--</span>
+               </div>
+            </div>
+          </div>
+
+          <!-- Watchlist -->
+          <div class="glass-panel">
+            <h3><span class="icon">🔍</span> Strategic Asset Deployment</h3>
+            <table class="watchlist-table">
+              <thead>
+                <tr>
+                  <th>TICKER</th>
+                  <th>PRICE</th>
+                  <th>POS <i class="info-trigger" data-info="Position: The total number of shares held in this asset.">i</i></th>
+                  <th>PNL <i class="info-trigger" data-info="Profit & Loss: Unrealized gain or loss on this specific position.">i</i></th>
+                  <th>AI BIAS <i class="info-trigger" data-info="The internal 'Conviction Score' (-100 to +100) from the Brain.">i</i></th>
+                  <th>STATUS <i class="info-trigger" data-info="The current action or operational state of the agent for this ticker.">i</i></th>
+                </tr>
+              </thead>
+              <tbody id="watchlist-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Trade Ledger -->
+          <div class="glass-panel">
+            <h3><span class="icon">📜</span> Neural Trade Ledger</h3>
+            <table class="watchlist-table" style="font-size: 0.75rem;">
+              <thead>
+                <tr>
+                  <th>TIME</th>
+                  <th>TICKER</th>
+                  <th>ACTION</th>
+                  <th>SHARES</th>
+                  <th>PRICE</th>
+                  <th>RATIONALE</th>
+                </tr>
+              </thead>
+              <tbody id="ledger-body">
+                 <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No trades executed yet...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="right-col" style="display:flex; flex-direction:column; gap:1rem;">
+           <section class="glass-panel logs-container" style="flex:1">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                 <h3><span class="icon">🧠</span> Reasoning Trace</h3>
+                 <span id="log-count" style="font-size:0.6rem; color:var(--text-muted);">0 MSG</span>
+              </div>
+              <div id="agent-feed" class="feed" style="max-height: 800px;">
+                 <div class="log system">Awaiting Agent Sync...</div>
+              </div>
+           </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- Hidden Tooltip Container -->
+    <div id="global-tooltip" class="tooltip-box"></div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

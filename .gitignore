@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+tests/
+venv/
+.DS_Store
+artifacts/
+.gemini/

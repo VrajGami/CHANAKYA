@@ -1,0 +1,13 @@
+ib_async
+pandas
+pydantic
+python-dotenv
+langgraph
+ta-lib
+yfinance
+fastapi
+uvicorn
+websockets
+chromadb
+langchain-core
+langchain-community
